@@ -55,7 +55,7 @@ class TrainTrackDriver {
         theTrainTrack.theTrainActivity.printActivities();
 
         // Final message
-        System.out.println("All trains have successfully travelled 5 circuits of their track loop ");
+        System.out.println("All trains have successfully travelled the track ");
     } // end main
 
 } // end TrainsOnTrack class

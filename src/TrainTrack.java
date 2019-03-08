@@ -11,24 +11,10 @@ public class TrainTrack {
     // reference to train activity record
     Activity theTrainActivity;
 
-    // global count of trains on shared track
-    AtomicInteger aUsingSharedJunction1;
-    AtomicInteger bUsingSharedJunction1;
-    AtomicInteger aUsingSharedJunction2;
-    AtomicInteger bUsingSharedJunction2;
-
     // counting semaphore to limit number of trains on track
     MageeSemaphore aCountSem;
     MageeSemaphore bCountSem;
 
-    // declare  Semaphores for mutually exclusive access to aUsingSharedTrack
-    private final MageeSemaphore aMutexSem;
-    // declare  Semaphores for mutually exclusive access to bUsingSharedTrack
-    private final MageeSemaphore bMutexSem;
-
-    // shared junction locks
-    MageeSemaphore sharedJunctionLock1;
-    MageeSemaphore sharedJunctionLock2;
 
     /* Constructor for TrainTrack */
     public TrainTrack() {
@@ -38,20 +24,11 @@ public class TrainTrack {
         for (int i = 0; i <= 21; i++) {
             slotSem[i] = new MageeSemaphore(1);
         }
-        // create  semaphores for mutually exclusive access to global count
-        aMutexSem = new MageeSemaphore(1);
-        bMutexSem = new MageeSemaphore(1);
-        // create global AtomicInteger count variables
-        aUsingSharedJunction1 = new AtomicInteger(0);
-        bUsingSharedJunction1 = new AtomicInteger(0);
-        aUsingSharedJunction2 = new AtomicInteger(0);
-        bUsingSharedJunction2 = new AtomicInteger(0);
+
         // create  semaphores for limiting number of trains on track
         aCountSem = new MageeSemaphore(4);
         bCountSem = new MageeSemaphore(4);
-        // initially shared junctions are accessible
-        sharedJunctionLock1 = new MageeSemaphore(1);
-        sharedJunctionLock2 = new MageeSemaphore(1);
+
     }  // constructor
 
     public void trainA_MoveOnToTrack(String trainName) {
@@ -103,117 +80,66 @@ public class TrainTrack {
     } // end trainB_MoveAroundToSharedTrack
 
     public void trainA_CrossSharedJunction1(String trainName) {
-        // wait for the necessary conditions to get access to shared junction
-        aMutexSem.P(); // obtain mutually exclusive access to global variable aUsingSharedJunction1
-        if (aUsingSharedJunction1.incrementAndGet() == 1)// if first A train cross shared junction
-        {
-            sharedJunctionLock1.P();  // grab lock to shared junction
-        }
-        aMutexSem.V(); // release mutually exclusive access to global variable aUsingSharedJunction1
-        // cross shared junction
-        slotSem[5].P();
-        slots[5] = slots[3];
+        slotSem[4].P(); // check that position 4 is free
+        slotSem[5].P(); // check that position 5 is free
+        slots[4] = slots[3];
         slots[3] = "[..]";
-        slotSem[3].V(); //move from slot[3] to slot[5]
-        theTrainActivity.addMovedTo(5);  //record the train activity
+        slotSem[3].V(); //move from slot[3] to slot[4]
+        theTrainActivity.addMovedTo(4);  //record the train activity
         CDS.idleQuietly((int) (Math.random() * 10));
+        slots[5] = slots[4];
+        slots[4] = "[..]";
+        slotSem[4].V(); //move from slot[4] to slot[5]
+        theTrainActivity.addMovedTo(5);
         slotSem[6].P();
         slots[6] = slots[5];
         slots[5] = "[..]";
         slotSem[5].V(); //move from slot[5] to slot[6]
         theTrainActivity.addMovedTo(6); // record the train activity
-        CDS.idleQuietly((int) (Math.random() * 10));
-        aMutexSem.P(); // obtain mutually exclusive access to global variable aUsingSharedJunction1
-        if (aUsingSharedJunction1.decrementAndGet() == 0) // if last A train crossed sharedJunction
-        {
-            sharedJunctionLock1.V(); // release lock to shared junction
-        }
-        aMutexSem.V(); // release mutually exclusive access to global variable aUsingSharedJunction1
+        slotSem[7].P();
+        slotSem[8].P();
+        slots[7] = slots[6];
+        slots[6] = "[..]";
+        slotSem[6].V(); //move from slot[6] to slot[8]
+        theTrainActivity.addMovedTo(7); // record the train activity
+        slots[8] = slots[7];
+        slots[7] = "[..]";
+        slotSem[7].V(); //move from slot[6] to slot[8]
+        theTrainActivity.addMovedTo(8); // record the train activity
         CDS.idleQuietly((int) (Math.random() * 10));
     }// end   trainA_CrossSharedJunction1
 
     public void trainB_CrossSharedJunction1(String trainName) {
         CDS.idleQuietly((int) (Math.random() * 10));
-        // wait for the necessary conditions to get access to shared junction
-        bMutexSem.P(); // obtain mutually exclusive access to global variable bUsingSharedJunction1
-        if (bUsingSharedJunction1.incrementAndGet() == 1)// if first B train joining shared junction
-        {
-            sharedJunctionLock1.P();  // grab lock to shared junction
-        }
-        bMutexSem.V(); // release mutually exclusive access to global variable bUsingSharedJunction1
-        CDS.idleQuietly((int) (Math.random() * 10));
         // cross shared junction
-        slotSem[16].P();
-        slots[16] = slots[15];
+        slotSem[7].P(); // check that position 7 is free
+        slotSem[16].P(); // check that position 16 is free
+        slots[7] = slots[15];
         slots[15] = "[..]";
-        slotSem[15].V(); //move from slot[15] to slot[16]
-        theTrainActivity.addMovedTo(16);  //record the train activity
+        slotSem[15].V(); //move from slot[15] to slot[7]
+        theTrainActivity.addMovedTo(7);  //record the train activity
         CDS.idleQuietly((int) (Math.random() * 10));
+        slots[16] = slots[7];
+        slots[7] = "[..]";
+        slotSem[7].V(); //move from slot[7] to slot[16]
+        theTrainActivity.addMovedTo(16);  //record the train activity
         slotSem[17].P();
         slots[17] = slots[16];
         slots[16] = "[..]";
         slotSem[16].V(); //move from slot[16] to slot[17]
         theTrainActivity.addMovedTo(17); // record the train activity
-        CDS.idleQuietly((int) (Math.random() * 10));
-        bMutexSem.P(); // obtain mutually exclusive access to global variable bUsingSharedJunction1
-        if (bUsingSharedJunction1.decrementAndGet() == 0) // if last B train crossed shared junction
-        {
-            sharedJunctionLock1.V(); // release lock to shared junction
-        }
-        bMutexSem.V(); // release mutually exclusive access to global variable bUsingSharedJunction1
-        CDS.idleQuietly((int) (Math.random() * 10));
-    }// end   trainB_CrossSharedJunction1
-
-    public void trainA_CrossSharedJunction2(String trainName) {
-        // wait for the necessary conditions to get access to shared junction
-        aMutexSem.P(); // obtain mutually exclusive access to global variable aUsingSharedJunction2
-        if (aUsingSharedJunction2.incrementAndGet() == 1)// if first A train joining shared junction
-        {
-            sharedJunctionLock2.P();  // grab lock to shared junction
-        }
-        aMutexSem.V(); // release mutually exclusive access to global variable aUsingSharedJunction2
-        // cross shared junction
-        slotSem[8].P();
-        slots[8] = slots[6];
-        slots[6] = "[..]";
-        slotSem[6].V(); //move from slot[6] to slot[8]
-        theTrainActivity.addMovedTo(8); // record the train activity
-        CDS.idleQuietly((int) (Math.random() * 10));
-        aMutexSem.P(); // obtain mutually exclusive access to global variable aUsingSharedJunction2
-        if (aUsingSharedJunction2.decrementAndGet() == 0) // if last A train crossed shared junction
-        {
-            sharedJunctionLock2.V(); // release lock to shared junction
-        }
-        aMutexSem.V(); // release mutually exclusive access to global variable aUsingSharedJunction2
-        CDS.idleQuietly((int) (Math.random() * 10));
-    }// end   trainA_CrossSharedJunction2
-
-    public void trainB_CrossSharedJunction2(String trainName) {
-        CDS.idleQuietly((int) (Math.random() * 10));
-        // wait for the necessary conditions to get access to shared junction
-        bMutexSem.P(); // obtain mutually exclusive access to global variable bUsingSharedJunction2
-        if (bUsingSharedJunction2.incrementAndGet() == 1)// if first B train joining shared junction
-        {
-            sharedJunctionLock2.P();  // grab lock to shared junction
-        }
-        bMutexSem.V(); // release mutually exclusive access to global variable bUsingSharedJunction2
-        CDS.idleQuietly((int) (Math.random() * 10));
-        // cross shared junction
         slotSem[18].P();
-        slots[18] = slots[17];
+        slotSem[4].P();
+        slots[4] = slots[17];
         slots[17] = "[..]";
-        slotSem[17].V(); //move from slot[17] to slot[18]
+        slotSem[17].V(); //move from slot[17] to slot[4]
+        theTrainActivity.addMovedTo(4); // record the train activity
+        slots[18] = slots[4];
+        slots[4] = "[..]";
+        slotSem[4].V(); //move from slot[4] to slot[18]
         theTrainActivity.addMovedTo(18); // record the train activity
         CDS.idleQuietly((int) (Math.random() * 10));
-        bMutexSem.P(); // obtain mutually exclusive access to global variable bUsingSharedJunction2
-        if (bUsingSharedJunction2.decrementAndGet() == 0) // if last B train crossed shared junction
-        {
-            sharedJunctionLock2.V(); // release lock to shared junction
-        }
-        bMutexSem.V(); // release mutually exclusive access to global variable bUsingSharedJunction2
-        CDS.idleQuietly((int) (Math.random() * 10));
-    }// end   trainB_CrossSharedJunction2
-
+    }// end   trainB_CrossSharedJunction1
 
     public void trainA_MoveAroundToEndTrack(String trainName) {
         CDS.idleQuietly((int) (Math.random() * 100));
